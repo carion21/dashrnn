@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PFE RNN</title>
+    <link rel="stylesheet" href="../assets/personal/css/aloader.css">
+    <link rel="stylesheet" href="../assets/bootstrap/css/bootstrap.min.css">
+    <script src="../assets/bootstrap/js/bootstrap.min.js"></script>
+    <script src="../assets/personal/js/chart.min.js"></script>
+</head>
+<style>
+    .p {
+        border: 1px solid black;
+        height: 100px;
+    }
+</style>
+
+<body onload="myFunction()" style="margin:0;">
+    <div class="container-fluid">
+        <div id="loader"></div>
+        <div class="row">
+            <div id="panel" class="col-md-3 p">
+                <div class="row">
+                    <div id="menu" class="card p-2 mb-1 shadow-lg rounded">
+                        <div class="card-header text-center">
+                            TABLEAU DE BORD
+                        </div>
+                        <div class="card-body">
+                            <ul id="ulmenu" class="list-group list-group-flush">
+                            </ul>
+                        </div>
+                        <div class="card-footer">
+
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="dashe" class="col-md-9 p">
+                <div class="container-fluid">
+                    <div class="row d-flex justify-content-center">
+                        <div class="col-md-8">
+                            <div class="card p-2 mb-1 shadow rounded">
+                                <div class="card-header">
+                                    Description
+                                </div>
+                                <div class="card-body text-center">
+                                    <h3 id="description" class="card-title"></h3>
+                                </div>
+                                <div class="card-footer"></div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row d-flex justify-content-center">
+                        <div class="col-md-4">
+                            <div class="form-group mb-3">
+                                <label for="exampleFormControlInput1" class="form-label">Sélectionner un
+                                    arrondissement</label>
+                                <select id="select_arrondissement" class="form-control form-control-lg">
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div id="grafic" class="card shadow p-2 mb-4 bg-white rounded">
+                            <div class="card-header">
+                                <i class="fas fa-chart-area me-1"></i>
+                                Graphique 5
+                            </div>
+                            <div id="dimychart" class="card-body">
+                                <canvas id="mychart" width="100%" height="40"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script>
+        var myVar;
+        function myFunction() {
+            myVar = setTimeout(showPage, 1500);
+        }
+        function showPage() {
+            document.getElementById("loader").style.display = "none";
+            //document.getElementById("myDiv").style.display = "block";
+        }
+    </script>
+</body>
+
+<script src="../assets/personal/js/jquery.min.js"></script>
+<script src="../assets/personal/js/main.js"></script>
+<script>
+    $(document).ready(async function () {
+
+        const description = "La répartition des ménages par arrondissement selon l’état de santé"
+        $('#description').html(description)
+
+        function exa_1(id, titre) {
+            var eht = '<li id="lim' + id + '" class="list-group-item">' +
+                '<div class="row">' +
+                '<a id="dash' + id + '" href="dash' + id + '.html" class="btn btn-lg btn-dark shadow-lg p-3 rounded btm">' + titre + '</a>' +
+                '</div>' +
+                '</li>'
+            return eht
+        }
+
+        var nb = 10
+        var wh = $(window).height()
+        const gcolors = getcolors()
+
+        var panel = $('#panel')
+        var dashe = $('#dashe')
+        var menu = $('#menu')
+        var ulmenu = $('#ulmenu')
+
+        panel.css('height', wh)
+        dashe.css('height', wh)
+        menu.css('margin-top', wh * 0.030)
+
+        var grafic = $('#grafic')
+        grafic.css('height', wh * 0.68)
+
+        for (let i = 0; i < 10; i++) {
+            var j = i + 1
+            const eht = exa_1(j, "Graphique " + j)
+            ulmenu.append(eht)
+        }
+
+        var sard = $('#select_arrondissement')
+        var nar = 360
+        function get_arond(id) {
+            var eht = ''
+            if (id == 1) {
+                eht = '<option selected value="' + id + '">Arrondissement ' + id + '</option>'
+            } else {
+                eht = '<option value="' + id + '">Arrondissement ' + id + '</option>'
+            }
+            return eht
+        }
+        var eht = ""
+        for (let i = 0; i < nar; i++) {
+            var j = i + 1
+            eht = eht + get_arond(j)
+        }
+        sard.html(eht)
+
+        var idar = sard.val();
+        setChart(idar)
+
+        function get_vname(v) {
+            return "../json/har_" + v + ".json"
+        }
+
+        var qualit = ["","Très Bon","Bon","Passable","Médiocre"]
+
+        async function getConfig(idar) {
+            let v = idar
+            let vname = get_vname(v)
+            let data = await $.getJSON(vname)
+            console.log(data);
+            const dpes = data.etat_de_sante
+            let ny = 4
+            let labels = []
+            let datas = []
+            let colors = []
+            for (let i = 0; i < ny; i++) {
+                k = i + 1
+                const label = qualit[k]
+                labels.push(label)
+                colors.push(gcolors[i])
+                let ni = 0
+                for (let j = 0; j < dpes.length; j++) {
+                    const dpe = dpes[j];
+                    if (dpe == k) {
+                        ni += 1
+                    }
+                }
+                datas.push(ni)
+            }
+            let db = {
+                labels: labels,
+                datas: datas,
+                colors: colors
+            }
+            return db
+        }
+
+        function resetChart() {
+            var dimychart = $('#dimychart')
+            let eht = '<canvas id="mychart" width="100%" height="40"></canvas>'
+            dimychart.html(eht)
+        }
+
+        async function setChart(idar) {
+            let db = await getConfig(idar)
+            resetChart()
+            var ctx = $("#mychart")
+            console.log(ctx.text());
+            var myChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: db.labels,
+                    datasets: [{
+                        label: "Arrondissement " + idar,
+                        axis: 'x',
+                        backgroundColor: db.colors,
+                        borderColor: "rgb(0,0,0)",
+                        data: db.datas,
+                    }],
+                },
+                options: {
+                    indexAxis: 'x',
+                }
+            });
+            console.log(ctx.text());
+        }
+
+        sard.change(function () {
+            var idar = $(this).val();
+            setChart(idar)
+            console.log(idar);
+        });
+
+
+
+    })
+
+</script>
+
+</html>
